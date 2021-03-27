@@ -1,0 +1,47 @@
+{
+  "test": {
+    "name": "test",
+    "code": "\r\n//[[location(0)]] var<in> fragColor : vec4<f32>;\r\n[[location(0)]] var<out> outColor: vec4<f32>;\r\n[[location(0)]] var<in> vUV : vec2<f32>;\r\n\r\n\r\n[[block]] struct Uniforms {\r\n  [[offset(0)]] time : f32;\r\n  [[offset(4)]] btime : f32;\r\n\r\n};\r\n\r\n[[binding(0), group(0)]] var<uniform> uniforms: Uniforms;\r\n[[binding(1), group(0)]] var mySampler: sampler;\r\n[[binding(2), group(0)]] var myTexture: texture_2d<f32>;\r\n\r\n\r\n[[stage(fragment)]]\r\nfn main() -> void {\r\n\r\n  outColor = vec4<f32>(1.0   , 0.0 + sin(0. + uniforms.time), .3, 1.0);\r\n  outColor[0] = vUV[0];\r\n  \r\n  var tex: vec4<f32> = textureSample(myTexture, mySampler, vUV );\r\n  outColor = tex + outColor*0. ;\r\n  outColor[0] = outColor[0] + uniforms.btime*1110.5;\r\n  //outColor = fragColor;\r\n  return;\r\n}\r\n\r\n",
+    "codeLanguage": "wgsl",
+    "textures": [
+      { "name": "ShadertoyA.jpg" },
+      { "name": "ShadertoyB.jpg" },
+      { "name": "ShadertoyA.jpg" },
+      { "name": "ShadertoyA.jpg" },
+      { "name": "ShadertoyA.jpg" },
+      { "name": "ShadertoyA.jpg" },
+      { "name": "ShadertoyA.jpg" },
+      { "name": "ShadertoyA.jpg" }
+    ]
+  },
+  "shaderB": {
+    "name": "shaderB",
+    "code": "\r\n//[[location(0)]] var<in> fragColor : vec4<f32>;\r\n[[location(0)]] var<out> outColor: vec4<f32>;\r\n[[location(0)]] var<in> vUV : vec2<f32>;\r\n\r\n\r\n[[block]] struct Uniforms {\r\n  [[offset(0)]] time : f32;\r\n};\r\n\r\n[[binding(0), group(0)]] var<uniform> uniforms: Uniforms;\r\n[[binding(2), group(0)]] var mySampler: sampler;\r\n[[binding(1), group(0)]] var myTexture: texture_2d<f32>;\r\n\r\n\r\n[[stage(fragment)]]\r\nfn main() -> void {\r\n\r\n  outColor = vec4<f32>(1.0, 0.0 + sin(0. + uniforms.time), .3, 1.0);\r\n  outColor[0] = vUV[0];\r\n  \r\n  var tex: vec4<f32> = textureSample(myTexture, mySampler, vUV );\r\n  outColor = tex + outColor*0.2;\r\n  \r\n  //outColor = fragColor;\r\n  return;\r\n}\r\n\r\n",
+    "codeLanguage": "wgsl",
+    "textures": [
+      { "name": "ShadertoyC.jpg" },
+      { "name": "ShadertoyB.jpg" },
+      { "name": "ShadertoyA.jpg" },
+      { "name": "ShadertoyA.jpg" },
+      { "name": "ShadertoyA.jpg" },
+      { "name": "ShadertoyA.jpg" },
+      { "name": "ShadertoyA.jpg" },
+      { "name": "ShadertoyA.jpg" }
+    ]
+  },
+  "glsl": {
+    "name": "glsl",
+    "code": "#version 450\r\nlayout(location = 0) out vec4 outColor;\r\n\r\nvoid main() {\r\n  outColor =  vec4(1,0,0,1);\r\n}",
+    "codeLanguage": "glsl",
+    "textures": [
+      { "name": "ShadertoyC.jpg" },
+      { "name": "ShadertoyB.jpg" },
+      { "name": "ShadertoyA.jpg" },
+      { "name": "ShadertoyA.jpg" },
+      { "name": "ShadertoyA.jpg" },
+      { "name": "ShadertoyA.jpg" },
+      { "name": "ShadertoyA.jpg" },
+      { "name": "ShadertoyA.jpg" }
+    ]
+  }
+}

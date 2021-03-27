@@ -1,0 +1,237 @@
+// import * as _ from 'lodash'
+import definitions from 'definitions'
+
+const initializeHTML = ()=>{
+  document.body.style.margin = 0
+  document.body.style.padding = 0
+  document.body.style.overflow = "hidden"
+  const canvas = document.createElement("canvas")
+  document.body.appendChild(canvas)
+  canvas.style.position = 'fixed'
+  canvas.style.left = '0'
+  canvas.style.top = '0'
+
+  // document.body.style.width = '100%'
+  // document.body.style.height = '100%'
+  // canvas.style.width = '100%'
+  // canvas.style.height = '100%'
+  const WIDTH = canvas.width = 1920
+  const HEIGHT = canvas.height = 1080
+  // const WIDTH = canvas.width = 1080
+  // const HEIGHT = canvas.height = 720
+
+  document.body.style.width = `${WIDTH}`
+  document.body.style.height = `${HEIGHT}`
+  canvas.style.width = `${WIDTH}`
+  canvas.style.height = `${HEIGHT}`
+
+  // const WIDTH = canvas.width = 1920
+  // const HEIGHT = canvas.height = 1080
+  // const WIDTH = canvas.width = 400
+  // const HEIGHT = canvas.height = 400
+  window.divAutomaton = document.createElement( 'divAutomaton' );
+  document.body.appendChild( window.divAutomaton );
+  window.divAutomaton.style.position = 'fixed';
+  window.divAutomaton.style.width = '100%';
+  window.divAutomaton.style.height = '240px';
+  window.divAutomaton.style.right = 0;
+  window.divAutomaton.style.bottom = 0;
+
+  window.checkActive = document.createElement( 'input' );
+  document.body.appendChild( window.checkActive );
+  window.checkActive.type = 'checkbox';
+  window.checkActive.checked = true;
+  window.checkActive.style.position = 'fixed';
+  window.checkActive.style.left = '8px';
+  window.checkActive.style.bottom = '248px';
+
+
+}
+window.onload = async() =>{
+  // !      
+  // ! INIT ! // 
+  // !  
+
+  initializeHTML();
+  const adapter: GPUAdapter = await navigator.gpu.requestAdapter()
+  const device = await adapter.requestDevice()
+  if(!adapter || !device ){
+    //console.error("Error in adapter or device setup.");
+    window.alert("Error in adapter or device setup.")
+    return
+  }
+  // !      
+  // ! LOGIC ! // 
+  // !      
+
+  // Buffer creation
+  const gpuBuffer = device.createBuffer({
+    mappedAtCreation: true,
+    size: 4,
+    usage:  GPUBufferUsage.COPY_SRC | GPUBufferUsage.MAP_WRITE
+  })
+
+  const arrayBuffer = gpuBuffer.getMappedRange()
+
+  new Uint8Array(arrayBuffer).set([0,1,2,3])
+
+  gpuBuffer.unmap()
+
+  const gpuBufferB = device.createBuffer({
+    size: 4,
+    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
+  })
+
+  // Command Encoding / Copy
+  const commandEncoder = await device.createCommandEncoder()
+  commandEncoder.copyBufferToBuffer(
+    gpuBuffer,
+    0,
+    gpuBufferB,
+    0,
+    4
+  )
+  const copyCommands = commandEncoder.finish()
+  device.queue.submit([copyCommands])
+
+  await gpuBufferB.mapAsync(GPUMapMode.READ)
+  const copyArrayBuffer = gpuBufferB.getMappedRange()
+  console.log(new Uint8Array(copyArrayBuffer))
+
+
+
+  // Bind group
+  const bindGroupLayout = device.createBindGroupLayout({
+    entries: [
+      {
+        binding: 0,
+        visibility: GPUShaderStage.COMPUTE,
+        buffer: {
+          type: "read-only-storage"
+        }
+      }
+    ]
+  })
+  const bindGroup = device.createBindGroup({
+    layout: bindGroupLayout,
+    entries: [
+      {
+        binding: 0,
+        resource: {
+          buffer: gpuBuffer 
+        }
+      }
+    ]
+  })
+  
+  // * Render pipeline
+
+  const computePipeline = device.createRenderPipeline({
+    computeStage:{
+      module: device.createShaderModule({ code: require('./shaders/compute')}),
+      entryPoint: 'main',
+    },
+
+  })
+
+  const renderPipeline = device.createRenderPipeline({
+    vertexStage:{
+      module: device.createShaderModule({ code: require('./shaders/vert')}),
+      entryPoint: 'main',
+    },
+    fragmentStage:{
+      module: device.createShaderModule({ code: require('./shaders/frag')}),
+      entryPoint: 'main',
+    },
+    primitiveTopology: 'triangle-list',
+    depthStencilState: {
+      depthWriteEnabled: true,
+      depthCompare: 'less',
+      format: 'depth24plus-stencil8',
+    },
+
+    colorStates: [
+      {
+        format: 'bgra8unorm',
+      },
+    ],
+  })
+
+  // * Textures
+
+  const depthTexture = device.createTexture({
+    size: {width: canvas.width, height: canvas.height, depth: 1},
+    format: ''
+  })
+  // * Vertex Buffer  
+  const vertexBufferData = new Float32Array([
+    -0.01, -0.02, 0.01, -0.02, 0.0, 0.02,
+  ])
+
+  // * Render Pass Descriptor
+  const renderPassDescriptor = {
+    colorAttachments: [{
+      attachment: undefined, // added later
+      loadValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 }
+    }],
+    depthStencilAttachment: {
+      attachment: depthTexture.createView(),
+      depthLoadValue: 1,
+      depthStoreOp: 'store',
+      stencilLoadValue: 0,
+      stencilStoreOp: 'store',
+    }
+  }
+  // * Swapchain
+
+  let swapchain: GPUSwapchain = null
+
+  const context: GPUCanvasContext = canvas.getContext('gpupresent') as any
+
+  const swapChainDesc: GPUSwapChainDescriptor = {
+    device: device,
+    format: 'bgra8unorm',
+    usage: GPUTextureUsage.OUTPUT_ATTACHMENT | GPUTextureUsage.COPY_SRC
+  }
+
+  swapchain = context.configureSwapChain(swapChainDesc)
+
+  // !      
+  // ! RENDERING ! // 
+  // !      
+
+  const render = () => {
+
+    renderPassDescriptor.colorAttachments[0].attachment = swapchain
+      .getCurrentTexture()
+      .createView()
+
+    const commandEncoder = device.createCommandEncoder()
+    {
+      const passEncoder = commandEncoder.beginComputePass()
+      passEncoder.setPipeline(computePipeline)
+      // passEncoder.setBindGroup(0, partcomputePipelineicleBind)
+      passEncoder.dispatch(definitions.numParticles)
+      passEncoder.endPass()
+    }
+
+    {
+      const passEncoder = commandEncoder.beginComputePass()
+      passEncoder.setPipeline(renderPipeline)
+      passEncoder.setVertexBuffer(0, gpuBuffer)
+      passEncoder.setVertexBuffer(1, gpuBufferB)
+      passEncoder.draw(3, definitions.numParticles, 0, 0)
+      passEncoder.endPass()
+    }
+
+    device.defaultQueue.submit([commandEncoder.finish()])
+
+    window.requestAnimationFrame(render)
+  }
+
+
+  window.requestAnimationFrame(render)
+
+
+
+}

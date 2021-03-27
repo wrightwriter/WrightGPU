@@ -1,0 +1,44 @@
+$background-color: black;
+$text-color: white;
+
+
+body {
+  background-color: $background-color;
+  color: $text-color;
+  size: 0.9em;
+
+  
+  
+  
+  #bottom{
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    .react-monaco-editor-container{
+      // width: 100% !important;
+      // height: 100% !important;
+      // align-content: stretch;
+    }
+
+    .texture-picker{
+      display: flex;
+      flex-direction: column;
+      .texture-picker-node{
+        border: 0.2em solid white;
+        border-radius: 0.1em;
+        background-size: cover;
+        background-position: center;
+        // background-color: red;
+        width: 10em;
+        height: 10em;
+      }
+    }
+
+
+  }
+
+  #logo {
+    font: red; 
+  }
+ 
+}
